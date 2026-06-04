@@ -1,0 +1,172 @@
+/* src/styles/globals.css */
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800;900&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ─── CSS CUSTOM PROPERTIES ─────────────────────────────────────────── */
+:root {
+  --gold:     #D4A843;
+  --gold2:    #F0C060;
+  --gold3:    #A07820;
+  --bg:       #08090D;
+  --bg2:      #0E1018;
+  --bg3:      #141620;
+  --surface:  #12141E;
+  --surface2: #1A1D2E;
+  --surface3: #1F2235;
+  --text:     #E8EAF0;
+  --muted:    #7A7F96;
+  --subtle:   #3A3F5C;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+}
+
+/* ─── COMPONENT LAYER ────────────────────────────────────────────────── */
+/* NOTE: We intentionally avoid @apply with custom color tokens here
+   because Tailwind can't resolve them in @apply at build time.
+   Use plain CSS instead — it is compiled the same way. */
+
+@layer components {
+
+  .btn-gold {
+    background: linear-gradient(135deg, #D4A843, #A07820);
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    color: #08090D;
+    padding: 0.75rem 1.5rem;
+    border-radius: 0.75rem;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: inline-block;
+    text-decoration: none;
+  }
+  .btn-gold:hover {
+    opacity: 0.88;
+    transform: translateY(-1px);
+  }
+
+  .btn-ghost {
+    background: transparent;
+    border: 1px solid #3A3F5C;
+    color: #E8EAF0;
+    padding: 0.625rem 1.25rem;
+    border-radius: 0.5rem;
+    font-weight: 500;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: inline-block;
+    text-decoration: none;
+    font-family: 'DM Sans', sans-serif;
+  }
+  .btn-ghost:hover {
+    border-color: #D4A843;
+    color: #D4A843;
+  }
+
+  .card {
+    background: #12141E;
+    border: 1px solid #3A3F5C;
+    border-radius: 1rem;
+    transition: all 0.3s;
+  }
+
+  .card-hover:hover {
+    transform: translateY(-6px);
+    border-color: rgba(212, 168, 67, 0.4);
+    background: #1A1D2E;
+  }
+
+  .section-tag {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: #D4A843;
+    margin-bottom: 0.875rem;
+    display: block;
+  }
+
+  .section-title {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(2rem, 4vw, 3.25rem);
+    font-weight: 800;
+    letter-spacing: -0.05em;
+    line-height: 1.08;
+    margin-bottom: 1rem;
+    color: #E8EAF0;
+  }
+
+  .gold-text {
+    background: linear-gradient(90deg, #D4A843, #F0C060, #D4A843);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .input-field {
+    width: 100%;
+    background: #1A1D2E;
+    border: 1px solid #3A3F5C;
+    color: #E8EAF0;
+    border-radius: 0.75rem;
+    padding: 0.75rem 1rem;
+    font-size: 0.875rem;
+    font-family: 'DM Sans', sans-serif;
+    transition: all 0.2s;
+    outline: none;
+  }
+  .input-field::placeholder { color: #7A7F96; }
+  .input-field:focus {
+    border-color: rgba(212, 168, 67, 0.6);
+    box-shadow: 0 0 0 3px rgba(212, 168, 67, 0.1);
+  }
+
+  .nav-glass {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 50;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 5%;
+    background: rgba(8, 9, 13, 0.85);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid rgba(212, 168, 67, 0.08);
+  }
+
+}
+
+/* ─── UTILITY LAYER ───────────────────────────────────────────────────── */
+@layer utilities {
+
+  .glow-gold {
+    box-shadow: 0 0 40px rgba(212,168,67,0.2), 0 0 80px rgba(212,168,67,0.1);
+  }
+
+  .text-gradient-gold {
+    background: linear-gradient(90deg, #D4A843, #F0C060);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar { display: none; }
+  .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+
+  /* Convenience colour utilities that match the CSS vars.
+     These are plain CSS — no @apply involved, so they always work. */
+  .text-brand-text  { color: #E8EAF0; }
+  .text-brand-muted { color: #7A7F96; }
+  .bg-brand-subtle  { background-color: #3A3F5C; }
+  .border-brand-subtle { border-color: #3A3F5C; }
+
+}

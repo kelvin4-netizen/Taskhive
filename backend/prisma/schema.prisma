@@ -1,0 +1,286 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── ENUMS ───────────────────────────────────────────────────────────────────
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  PENDING_VERIFICATION
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+enum PaymentMethod {
+  STRIPE
+  PAYPAL
+  PAYSTACK
+  FLUTTERWAVE
+  MPESA
+}
+
+enum TaskDifficulty {
+  EASY
+  MEDIUM
+  HARD
+}
+
+enum TaskStatus {
+  ACTIVE
+  PAUSED
+  COMPLETED
+  EXPIRED
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  EXPIRED
+  CANCELLED
+}
+
+enum NotificationType {
+  PAYMENT
+  TASK
+  SYSTEM
+  SUBSCRIPTION
+}
+
+// ─── MODELS ──────────────────────────────────────────────────────────────────
+
+model User {
+  id                String     @id @default(uuid())
+  fullName          String
+  email             String     @unique
+  passwordHash      String
+  country           String
+  phoneNumber       String?
+  role              Role       @default(USER)
+  status            UserStatus @default(PENDING_VERIFICATION)
+  emailVerified     Boolean    @default(false)
+  emailVerifyToken  String?
+  resetPasswordToken String?
+  resetPasswordExpiry DateTime?
+  profileCompleted  Boolean    @default(false)
+  walletBalance     Float      @default(0)
+  totalEarned       Float      @default(0)
+  referralCode      String?    @unique
+  referredBy        String?
+  avatarUrl         String?
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+
+  purchases         Purchase[]
+  payments          Payment[]
+  subscriptions     PhoneSubscription[]
+  notifications     Notification[]
+  taskSubmissions   TaskSubmission[]
+  adminLogs         AdminLog[]         @relation("AdminUser")
+  targetAdminLogs   AdminLog[]         @relation("TargetUser")
+
+  @@index([email])
+  @@index([referralCode])
+}
+
+model Category {
+  id            String    @id @default(uuid())
+  name          String    @unique
+  slug          String    @unique
+  description   String
+  thumbnailUrl  String?
+  estimatedEarn String
+  isActive      Boolean   @default(true)
+  sortOrder     Int       @default(0)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  packages      Package[]
+  tasks         Task[]
+  purchases     Purchase[]
+}
+
+model Package {
+  id            String    @id @default(uuid())
+  categoryId    String
+  name          String
+  description   String
+  price         Float
+  taskLimit     Int?      // null = unlimited
+  isUnlimited   Boolean   @default(false)
+  isMonthly     Boolean   @default(false)
+  features      String[]
+  isActive      Boolean   @default(true)
+  sortOrder     Int       @default(0)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  category      Category  @relation(fields: [categoryId], references: [id])
+  purchases     Purchase[]
+}
+
+model Purchase {
+  id            String        @id @default(uuid())
+  userId        String
+  categoryId    String
+  packageId     String
+  paymentId     String?       @unique
+  tasksUsed     Int           @default(0)
+  taskLimit     Int?
+  isUnlimited   Boolean       @default(false)
+  isActive      Boolean       @default(true)
+  expiresAt     DateTime?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  user          User          @relation(fields: [userId], references: [id])
+  category      Category      @relation(fields: [categoryId], references: [id])
+  package       Package       @relation(fields: [packageId], references: [id])
+  payment       Payment?      @relation(fields: [paymentId], references: [id])
+
+  @@unique([userId, categoryId])
+  @@index([userId])
+  @@index([categoryId])
+}
+
+model Payment {
+  id              String        @id @default(uuid())
+  userId          String
+  amount          Float
+  currency        String        @default("USD")
+  method          PaymentMethod
+  status          PaymentStatus @default(PENDING)
+  externalId      String?       // Stripe/PayPal payment ID
+  webhookVerified Boolean       @default(false)
+  metadata        Json?
+  refundedAt      DateTime?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  user            User          @relation(fields: [userId], references: [id])
+  purchase        Purchase?
+
+  @@index([userId])
+  @@index([status])
+}
+
+model Task {
+  id            String         @id @default(uuid())
+  categoryId    String
+  title         String
+  description   String
+  instructions  String
+  reward        Float
+  difficulty    TaskDifficulty @default(EASY)
+  status        TaskStatus     @default(ACTIVE)
+  timeLimit     Int?           // minutes
+  deadline      DateTime?
+  maxSubmissions Int?
+  submissionCount Int          @default(0)
+  thumbnailUrl  String?
+  externalUrl   String?
+  tags          String[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  category      Category       @relation(fields: [categoryId], references: [id])
+  submissions   TaskSubmission[]
+
+  @@index([categoryId])
+  @@index([status])
+}
+
+model TaskSubmission {
+  id          String    @id @default(uuid())
+  taskId      String
+  userId      String
+  proof       String?
+  notes       String?
+  approved    Boolean?  // null = pending
+  reward      Float
+  createdAt   DateTime  @default(now())
+  reviewedAt  DateTime?
+
+  task        Task      @relation(fields: [taskId], references: [id])
+  user        User      @relation(fields: [userId], references: [id])
+
+  @@unique([taskId, userId])
+  @@index([userId])
+}
+
+model PhoneNumber {
+  id            String              @id @default(uuid())
+  number        String              @unique
+  areaCode      String
+  isAvailable   Boolean             @default(true)
+  createdAt     DateTime            @default(now())
+
+  subscriptions PhoneSubscription[]
+}
+
+model PhoneSubscription {
+  id            String             @id @default(uuid())
+  userId        String
+  phoneNumberId String
+  planName      String
+  price         Float
+  status        SubscriptionStatus @default(ACTIVE)
+  startsAt      DateTime           @default(now())
+  expiresAt     DateTime
+  autoRenew     Boolean            @default(true)
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+
+  user          User               @relation(fields: [userId], references: [id])
+  phoneNumber   PhoneNumber        @relation(fields: [phoneNumberId], references: [id])
+
+  @@index([userId])
+}
+
+model Notification {
+  id        String           @id @default(uuid())
+  userId    String
+  type      NotificationType
+  title     String
+  message   String
+  isRead    Boolean          @default(false)
+  metadata  Json?
+  createdAt DateTime         @default(now())
+
+  user      User             @relation(fields: [userId], references: [id])
+
+  @@index([userId, isRead])
+}
+
+model AdminLog {
+  id          String   @id @default(uuid())
+  adminId     String
+  targetId    String?
+  action      String
+  description String
+  metadata    Json?
+  ipAddress   String?
+  createdAt   DateTime @default(now())
+
+  admin       User     @relation("AdminUser", fields: [adminId], references: [id])
+  target      User?    @relation("TargetUser", fields: [targetId], references: [id])
+
+  @@index([adminId])
+  @@index([createdAt])
+}
