@@ -5,10 +5,10 @@ const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || '/api',
   withCredentials: true,
   headers: { 'Content-Type': 'application/json' },
-  timeout: 8000, // fail fast when backend is down
+  timeout: 30000, // 30s — Render free tier can take time to wake up
 });
 
-// ── Request interceptor — attach access token ──────────────────
+// ── Request interceptor — attach access token ─────────────────
 api.interceptors.request.use((config) => {
   try {
     const stored = JSON.parse(localStorage.getItem('taskhive-auth') || '{}');
@@ -18,7 +18,7 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// ── Response interceptor — auto-refresh on 401 ─────────────────
+// ── Response interceptor ──────────────────────────────────────
 let isRefreshing = false;
 let failedQueue = [];
 
@@ -30,12 +30,14 @@ const processQueue = (error, token = null) => {
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
-    // ── Backend not running / network error ────────────────────
+    // Network error or CORS or backend asleep
     if (!error.response) {
-      // Return a structured error so callers can detect offline state
+      const isTimeout = error.code === 'ECONNABORTED';
       return Promise.reject({
         isNetworkError: true,
-        message: 'Server is currently unreachable. Please try again later.',
+        message: isTimeout
+          ? 'Request timed out. The server may be starting up — please try again in 30 seconds.'
+          : 'Server is currently unreachable. Please try again later.',
         originalError: error,
       });
     }
@@ -60,13 +62,11 @@ api.interceptors.response.use(
       try {
         const res = await api.post('/auth/refresh');
         const { accessToken } = res.data.data;
-
         const stored = JSON.parse(localStorage.getItem('taskhive-auth') || '{}');
         if (stored?.state) {
           stored.state.accessToken = accessToken;
           localStorage.setItem('taskhive-auth', JSON.stringify(stored));
         }
-
         processQueue(null, accessToken);
         originalRequest.headers.Authorization = `Bearer ${accessToken}`;
         return api(originalRequest);
