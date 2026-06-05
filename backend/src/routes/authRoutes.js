@@ -3,7 +3,7 @@ const express = require('express');
 const router = express.Router();
 const { body } = require('express-validator');
 const {
-  register, verifyEmail, login, refreshToken,
+  register, verifyEmail, resendVerification, login, refreshToken,
   logout, forgotPassword, resetPassword, getMe,
 } = require('../controllers/authController');
 const { protect } = require('../middleware/authMiddleware');
@@ -21,6 +21,7 @@ const registerValidation = [
 
 router.post('/register', authLimiter, registerValidation, register);
 router.get('/verify-email/:token', verifyEmail);
+router.post('/resend-verification', authLimiter, [body('email').isEmail()], resendVerification);
 router.post('/login', authLimiter, [
   body('email').isEmail().normalizeEmail(),
   body('password').notEmpty(),

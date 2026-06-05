@@ -3,12 +3,12 @@ const nodemailer = require('nodemailer');
 const logger = require('../utils/logger');
 
 const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST,
-  port: parseInt(process.env.SMTP_PORT) || 587,
-  secure: false,
+  host: process.env.SMTP_HOST || 'smtp.resend.com',
+  port: parseInt(process.env.SMTP_PORT) || 465,
+  secure: true,
   auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
+    user: process.env.SMTP_USER || 'resend',
+    pass: process.env.SMTP_PASS, // Resend API key
   },
 });
 
@@ -17,30 +17,37 @@ const baseTemplate = (content) => `
 <html>
 <head>
   <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <style>
-    body { font-family: 'Arial', sans-serif; background: #08090D; margin: 0; padding: 0; }
-    .wrapper { max-width: 600px; margin: 0 auto; padding: 40px 20px; }
-    .card { background: #12141E; border: 1px solid #1F2235; border-radius: 16px; padding: 40px; }
-    .logo { font-size: 24px; font-weight: 900; color: #D4A843; margin-bottom: 32px; }
+    body { font-family: Arial, sans-serif; background: #0A0A0A; margin: 0; padding: 0; }
+    .wrapper { max-width: 580px; margin: 0 auto; padding: 40px 16px; }
+    .card { background: #141414; border: 1px solid #222; border-radius: 16px; padding: 40px 36px; }
+    .logo { font-size: 22px; font-weight: 900; color: #D4A843; margin-bottom: 28px; letter-spacing: -0.5px; }
     .logo span { color: #fff; }
-    h1 { color: #E8EAF0; font-size: 24px; margin: 0 0 16px; }
-    p { color: #7A7F96; font-size: 15px; line-height: 1.7; margin: 0 0 16px; }
-    .btn { display: inline-block; background: linear-gradient(135deg, #D4A843, #A07820); color: #08090D;
-           padding: 14px 32px; border-radius: 10px; text-decoration: none; font-weight: 700;
-           font-size: 15px; margin: 20px 0; }
-    .footer { color: #3A3F5C; font-size: 12px; margin-top: 32px; text-align: center; }
-    .divider { border: none; border-top: 1px solid #1F2235; margin: 24px 0; }
+    h1 { color: #fff; font-size: 22px; margin: 0 0 14px; font-weight: 800; }
+    p { color: #888; font-size: 14px; line-height: 1.75; margin: 0 0 14px; }
+    .btn { display: inline-block; background: linear-gradient(135deg, #D4A843, #A07820);
+           color: #0A0A0A; padding: 13px 30px; border-radius: 10px; text-decoration: none;
+           font-weight: 700; font-size: 14px; margin: 20px 0; }
+    .divider { border: none; border-top: 1px solid #222; margin: 24px 0; }
+    .code { background: #1A1A1A; border: 1px solid #333; border-radius: 8px; padding: 12px 18px;
+            font-family: monospace; font-size: 20px; font-weight: 800; color: #D4A843;
+            letter-spacing: 4px; text-align: center; margin: 16px 0; }
+    .footer { color: #333; font-size: 11px; margin-top: 24px; text-align: center; line-height: 1.6; }
+    .footer a { color: #555; text-decoration: none; }
+    .warn { background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.2);
+            border-radius: 8px; padding: 10px 14px; font-size: 12px; color: #F59E0B; margin-top: 14px; }
   </style>
 </head>
 <body>
   <div class="wrapper">
     <div class="card">
-      <div class="logo">Task<span>Hive</span></div>
+      <div class="logo">Task<span>Hive</span> 🐝</div>
       ${content}
     </div>
     <div class="footer">
-      <p>© ${new Date().getFullYear()} TaskHive. All rights reserved.</p>
-      <p>If you didn't create an account, you can safely ignore this email.</p>
+      <p>© ${new Date().getFullYear()} TaskHive · All rights reserved</p>
+      <p>If you didn't request this email, you can safely ignore it.</p>
     </div>
   </div>
 </body>
@@ -48,6 +55,10 @@ const baseTemplate = (content) => `
 
 const send = async ({ to, subject, html }) => {
   try {
+    if (!process.env.SMTP_PASS) {
+      logger.warn(`Email skipped (no SMTP_PASS) — would have sent "${subject}" to ${to}`);
+      return;
+    }
     await transporter.sendMail({
       from: process.env.EMAIL_FROM || 'TaskHive <noreply@taskhive.com>',
       to,
@@ -57,7 +68,6 @@ const send = async ({ to, subject, html }) => {
     logger.info(`Email sent to ${to}: ${subject}`);
   } catch (err) {
     logger.error(`Email failed to ${to}: ${err.message}`);
-    // Don't throw — email failure shouldn't break the request
   }
 };
 
@@ -67,11 +77,12 @@ const sendVerificationEmail = async (email, name, token) => {
     to: email,
     subject: 'Verify Your TaskHive Account',
     html: baseTemplate(`
-      <h1>Welcome, ${name}! 🐝</h1>
-      <p>You're one step away from unlocking your earning potential. Please verify your email address to activate your account.</p>
-      <a href="${url}" class="btn">Verify My Email</a>
+      <h1>Welcome, ${name}! 🎉</h1>
+      <p>You're one step away from unlocking your earning potential on TaskHive. Click the button below to verify your email address.</p>
+      <a href="${url}" class="btn">✓ Verify My Email</a>
       <hr class="divider"/>
-      <p>This link expires in 24 hours. If you didn't create a TaskHive account, ignore this email.</p>
+      <p style="font-size:12px;color:#555;">Or copy this link: <a href="${url}" style="color:#D4A843;">${url}</a></p>
+      <div class="warn">⏱ This link expires in 24 hours.</div>
     `),
   });
 };
@@ -83,27 +94,36 @@ const sendPasswordResetEmail = async (email, name, token) => {
     subject: 'Reset Your TaskHive Password',
     html: baseTemplate(`
       <h1>Password Reset Request</h1>
-      <p>Hi ${name}, we received a request to reset your password. Click the button below to choose a new one.</p>
-      <a href="${url}" class="btn">Reset Password</a>
+      <p>Hi ${name}, we received a request to reset your password. Click below to choose a new one.</p>
+      <a href="${url}" class="btn">Reset My Password</a>
       <hr class="divider"/>
-      <p>This link expires in 1 hour. If you didn't request this, your account is safe — just ignore this email.</p>
+      <div class="warn">⏱ This link expires in 1 hour. If you didn't request this, ignore this email.</div>
     `),
   });
 };
 
-const sendPaymentConfirmationEmail = async (email, name, { packageName, amount, categoryName }) => {
+const sendWelcomeEmail = async (email, name) => {
   await send({
     to: email,
-    subject: `Payment Confirmed — ${categoryName} Access Unlocked`,
+    subject: 'Welcome to TaskHive — Start Earning Today!',
     html: baseTemplate(`
-      <h1>Payment Confirmed ✦</h1>
-      <p>Hi ${name}, your payment was successful! Your access has been unlocked.</p>
-      <table style="width:100%;border-collapse:collapse;margin:20px 0">
-        <tr><td style="color:#7A7F96;padding:8px 0">Package</td><td style="color:#E8EAF0;text-align:right">${packageName}</td></tr>
-        <tr><td style="color:#7A7F96;padding:8px 0">Category</td><td style="color:#E8EAF0;text-align:right">${categoryName}</td></tr>
-        <tr><td style="color:#7A7F96;padding:8px 0">Amount Paid</td><td style="color:#D4A843;font-weight:700;text-align:right">$${amount}</td></tr>
-      </table>
-      <a href="${process.env.CLIENT_URL}/dashboard" class="btn">Go to My Dashboard →</a>
+      <h1>You're in, ${name}! 🐝</h1>
+      <p>Your TaskHive account is now active. Here's how to get started:</p>
+      <p>✦ Browse task categories<br/>✦ Choose a package that fits your goals<br/>✦ Complete tasks and earn real money</p>
+      <a href="${process.env.CLIENT_URL}/dashboard" class="btn">Go to Dashboard →</a>
+    `),
+  });
+};
+
+const sendPaymentConfirmation = async (email, name, packageName, amount) => {
+  await send({
+    to: email,
+    subject: `Payment Confirmed — ${packageName}`,
+    html: baseTemplate(`
+      <h1>Payment Successful! ✓</h1>
+      <p>Hi ${name}, your payment of <strong style="color:#D4A843;">$${amount}</strong> for the <strong>${packageName}</strong> package has been confirmed.</p>
+      <p>Your category is now active and tasks are ready for you.</p>
+      <a href="${process.env.CLIENT_URL}/dashboard" class="btn">Start Earning →</a>
     `),
   });
 };
@@ -111,5 +131,6 @@ const sendPaymentConfirmationEmail = async (email, name, { packageName, amount, 
 module.exports = {
   sendVerificationEmail,
   sendPasswordResetEmail,
-  sendPaymentConfirmationEmail,
+  sendWelcomeEmail,
+  sendPaymentConfirmation,
 };

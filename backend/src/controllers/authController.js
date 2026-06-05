@@ -347,9 +347,41 @@ const getMe = async (req, res, next) => {
   }
 };
 
+// ─── RESEND VERIFICATION EMAIL ────────────────────────────────────────────────
+const resendVerification = async (req, res, next) => {
+  try {
+    const { email } = req.body;
+    if (!email) {
+      return res.status(400).json({ success: false, message: 'Email is required.' });
+    }
+
+    const user = await prisma.user.findUnique({ where: { email } });
+
+    // Always return success to prevent email enumeration
+    if (!user || user.emailVerified) {
+      return res.json({ success: true, message: 'If that email exists and is unverified, a new link has been sent.' });
+    }
+
+    const crypto = require('crypto');
+    const token = crypto.randomBytes(32).toString('hex');
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { emailVerifyToken: token },
+    });
+
+    await emailService.sendVerificationEmail(email, user.fullName, token);
+
+    res.json({ success: true, message: 'Verification email resent. Please check your inbox.' });
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = {
   register,
   verifyEmail,
+  resendVerification,
   login,
   refreshToken,
   logout,
