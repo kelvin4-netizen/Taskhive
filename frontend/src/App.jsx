@@ -33,6 +33,7 @@ import NotificationsPage from '@/pages/dashboard/NotificationsPage';
 import AdminDashboard from '@/pages/admin/AdminDashboard';
 import AdminUsers from '@/pages/admin/AdminUsers';
 import AdminTasks from '@/pages/admin/AdminTasks';
+import AdminSubmissions from '@/pages/admin/AdminSubmissions';
 import AdminCategories from '@/pages/admin/AdminCategories';
 import AdminPayments from '@/pages/admin/AdminPayments';
 import AdminPhones from '@/pages/admin/AdminPhones';
@@ -105,6 +106,7 @@ export default function App() {
             <Route index element={<AdminDashboard />} />
             <Route path="users" element={<AdminUsers />} />
             <Route path="tasks" element={<AdminTasks />} />
+            <Route path="submissions" element={<AdminSubmissions />} />
             <Route path="categories" element={<AdminCategories />} />
             <Route path="payments" element={<AdminPayments />} />
             <Route path="phones" element={<AdminPhones />} />
