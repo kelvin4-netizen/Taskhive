@@ -119,4 +119,4 @@ export default function App() {
       </BrowserRouter>
     </QueryClientProvider>
   );
-}
+}// rebuild 06/07/2026 19:17:29
